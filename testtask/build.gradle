@@ -1,0 +1,33 @@
+class ProjectVersion{
+	String major
+	String minor
+	Boolean release
+}
+def projectVersion=new ProjectVersion()
+
+projectVersion.major="0"
+projectVersion.minor="1"
+projectVersion.release=false
+
+/*task printVersion(description:"print project version",group:"versioning"){
+	
+}*/
+
+task first <<{
+	println "first"
+}
+
+task second << {
+	println "second"
+}
+
+task printVersion(dependsOn:[first,second]) <<{
+
+	logger.quiet "version 1.0"
+}
+
+task third << {
+	println "third"
+}
+
+third.dependsOn printVersion
