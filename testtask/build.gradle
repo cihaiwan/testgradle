@@ -1,7 +1,18 @@
 class ProjectVersion{
-	String major
-	String minor
+	Integer major
+	Integer minor
 	Boolean release
+	
+	public ProjectVersion(){}
+	
+	public ProjectVersion(Integer major,Integer minor,Boolean release){
+		this.major=major
+		this.minor=minor
+		this.release=release
+	}
+	String toString(){
+		"$major.$minor${release ? '' : '-SNAPSHOT'}"
+	}
 }
 def projectVersion=new ProjectVersion()
 
@@ -9,9 +20,10 @@ projectVersion.major="0"
 projectVersion.minor="1"
 projectVersion.release=false
 
-/*task printVersion(description:"print project version",group:"versioning"){
+/*
+task printVersion(description:"print project version",group:"versioning"){
 	
-}*/
+}
 
 task first <<{
 	println "first"
@@ -31,3 +43,86 @@ task third << {
 }
 
 third.dependsOn printVersion
+*/
+ext.versionFile=file('version.properties')
+
+task loadVersion{
+	project.version=readVersion()
+} 
+
+ProjectVersion readVersion(){
+	logger.quiet 'Reading the version file'
+	if(!versionFile.exists()){
+		throw new GradleException('Requored version file does not exist: $versionFile.canonicalPath')
+	}
+	
+	Properties versionProps=new Properties()
+	
+	versionFile.withInputStream{stream->
+		versionProps.load(stream)
+	}
+	new ProjectVersion(versionProps.major.toInteger(),versionProps.minor.toInteger(),versionProps.release.toBoolean())
+}
+
+task printVersion<<{
+	println "Version:$version"
+}
+
+
+/*task makeReleaseVersion(group:"versionig",description:"makes project a release version") <<{
+	version.release=true
+	ant.propertyfile(file:versionFile){
+		entry(
+			key:'release',
+			type:'string',
+			operation:'=',
+			value:'true'
+		)
+	}
+} */
+
+/*
+task makeReleaseVersion(group:"versionig",description:"makes project a release version") {
+	inputs.property('release',version.release)
+	outputs.file versionFile
+	doLast{
+		ant.propertyfile(file:versionFile){
+			entry(
+				key:'release',
+				type:'string',
+				operation:'=',
+				value:'true'
+			)
+		}
+	}
+} 
+*/
+class MakeReleaseTask extends DefaultTask{
+	@Input
+	Boolean release
+	@OutputFile
+	File destFile
+	public MakeReleaseTask(){
+		group="versioning"
+		description="makes project a release version"
+	}
+	
+	@TaskAction
+	void start(){
+		project.version.release=release
+		ant.propertyfile(file:destFile){
+			entry(
+				key:'release',
+				type:'string',
+				operation:'=',
+				value:'true'
+			)
+		}
+	}
+}
+
+task makeReleaseVersion(type:MakeReleaseTask){
+	release=true
+	destFile=versionFile
+}
+ 
